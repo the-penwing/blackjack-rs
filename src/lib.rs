@@ -74,10 +74,7 @@ impl GameState {
     if player_val > 21 {
       self.losses += 1;
       GameStatus::PlayerBusted
-    } else if dealer_val > 21 {
-      self.wins += 1;
-      GameStatus::PlayerWon
-    } else if player_val > dealer_val {
+    } else if dealer_val > 21 || player_val > dealer_val {
       self.wins += 1;
       GameStatus::PlayerWon
     } else if dealer_val > player_val {

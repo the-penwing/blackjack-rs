@@ -1,8 +1,5 @@
 use blackjack_rs::{self, Action, GameState, GameStatus};
-use std::{
-  io::{self, Write},
-  process::Command,
-};
+use std::io::{self, Write};
 
 fn get_input(prompt: &str) -> String {
   print!("{}", prompt);
@@ -16,43 +13,43 @@ fn get_input(prompt: &str) -> String {
 }
 
 fn clear() {
-  if cfg!(target_os = "windows") {
-    Command::new("cls");
-  } else {
-    Command::new("clear");
-  }
+  print!("\x1B[2J\x1B[1;1H");
+  io::stdout().flush().unwrap();
 }
 
 fn render_round(game: &GameState) {
   clear();
-  println!("Your hand:\n");
+  println!("--- YOUR HAND ---");
   for card in game.player_hand() {
     println!("{}", card);
   }
-  println!("\nTotal Value: {}\n", game.player_score());
-  println!("Dealers Hand:\n");
+  println!("Total Value: {}\n", game.player_score());
+  println!("--- DEALERS HAND ---");
   let dealers_hand = game.dealer_hand();
   for card in dealers_hand {
     if dealers_hand.first() == Some(card) {
       println!("{}", card);
     } else {
-      println!("???");
+      println!("[Hidden Card]");
     }
   }
+  println!();
 }
 
 fn render_round_result(game: &GameState) {
   clear();
-  println!("Your Hand: \n");
+  println!("=== ROUND OVER ===");
+
+  println!("--- YOUR HAND ---");
   for card in game.player_hand() {
     println!("{}", card);
   }
-  println!("\n Total Value: {}\n", game.player_score());
-  println!("Dealers Hand:\n");
+  println!("Total Value: {}\n", game.player_score());
+  println!("--- DEALERS HAND ---");
   for card in game.dealer_hand() {
     println!("{}", card);
   }
-  println!("\n Dealer Value: {}", game.dealer_score());
+  println!("Dealer Value: {}\n", game.dealer_score());
   match game.status() {
     GameStatus::PlayerBusted => println!("You Busted!!"),
     GameStatus::PlayerWon => println!("You Won!!"),
@@ -61,21 +58,20 @@ fn render_round_result(game: &GameState) {
     GameStatus::InProgress => print!(""),
   }
   let (wins, losses, ties) = game.stats();
-  println!("Stats:");
-  println!("Wins: {wins}\nLosses: {losses}\nPushes: {ties}");
+  println!("--- SESSION STATS ---");
+  println!("Wins: {wins} | Losses: {losses} | Pushes: {ties}\n");
 }
 
 fn round_loop(game: &mut GameState) {
   game.setup_round();
-  render_round(game);
-
-  let mut status = game.status();
+  let mut status;
 
   loop {
+    render_round(game);
     println!("Hit or Stand:");
     println!("1) Hit");
     println!("2) Stand");
-    let prompt = "Action";
+    let prompt = "Action: ";
     let choice_raw = get_input(prompt);
     let choice: u8 = match choice_raw.parse::<u8>() {
       Ok(1) => 1,
@@ -92,7 +88,6 @@ fn round_loop(game: &mut GameState) {
     };
 
     status = game.update(action);
-    render_round(game);
 
     if status != GameStatus::InProgress {
       break;
@@ -105,22 +100,18 @@ fn main() {
   loop {
     round_loop(&mut game);
     render_round_result(&game);
-    let mut keep_playing = false;
-    loop {
+
+    let keep_playing = loop {
       let prompt = "Play again? (y/n): ";
       let choice_raw = get_input(prompt);
+
       match choice_raw.to_uppercase().as_str() {
-        "Y" => {
-          keep_playing = true;
-          break;
-        },
-        "N" => {
-          keep_playing = false;
-          break;
-        },
+        "Y" => break true,
+        "N" => break false,
         _ => println!("Please enter either 'y' or 'n'"),
       };
-    }
+    };
+
     if !keep_playing {
       println!("Thanks for Playing!!");
       break;
