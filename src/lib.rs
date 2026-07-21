@@ -220,7 +220,7 @@ fn build_deck() -> Vec<Card> {
   deck
 }
 
-fn shuffle_deck(deck: &mut Vec<Card>) {
+fn shuffle_deck(deck: &mut [Card]) {
   let mut rng = rng();
   deck.shuffle(&mut rng);
 }

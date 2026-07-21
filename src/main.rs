@@ -67,7 +67,7 @@ fn render_round_result(game: &GameState) {
 
 fn round_loop(game: &mut GameState) {
   game.setup_round();
-  render_round(&game);
+  render_round(game);
 
   let mut status = game.status();
 
@@ -76,7 +76,7 @@ fn round_loop(game: &mut GameState) {
     println!("1) Hit");
     println!("2) Stand");
     let prompt = "Action";
-    let choice_raw = get_input(&prompt);
+    let choice_raw = get_input(prompt);
     let choice: u8 = match choice_raw.parse::<u8>() {
       Ok(1) => 1,
       Ok(2) => 2,
@@ -92,7 +92,7 @@ fn round_loop(game: &mut GameState) {
     };
 
     status = game.update(action);
-    render_round(&game);
+    render_round(game);
 
     if status != GameStatus::InProgress {
       break;
@@ -100,4 +100,30 @@ fn round_loop(game: &mut GameState) {
   }
 }
 
-fn main() {}
+fn main() {
+  let mut game = GameState::new_game();
+  loop {
+    round_loop(&mut game);
+    render_round_result(&game);
+    let mut keep_playing = false;
+    loop {
+      let prompt = "Play again? (y/n): ";
+      let choice_raw = get_input(prompt);
+      match choice_raw.to_uppercase().as_str() {
+        "Y" => {
+          keep_playing = true;
+          break;
+        },
+        "N" => {
+          keep_playing = false;
+          break;
+        },
+        _ => println!("Please enter either 'y' or 'n'"),
+      };
+    }
+    if !keep_playing {
+      println!("Thanks for Playing!!");
+      break;
+    }
+  }
+}
