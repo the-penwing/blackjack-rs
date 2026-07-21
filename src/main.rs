@@ -1,5 +1,17 @@
+//! CLI entry point for blackjack_rs.
+//!
+//! Handles rendering, input, and the game loop.
+
+// ============================================================
+// Imports
+// ============================================================
+
 use blackjack_rs::{self, Action, GameState, GameStatus};
 use std::io::{self, Write};
+
+// ============================================================
+// Input / Terminal Utilities
+// ============================================================
 
 fn get_input(prompt: &str) -> String {
   print!("{}", prompt);
@@ -17,6 +29,11 @@ fn clear() {
   io::stdout().flush().unwrap();
 }
 
+// ============================================================
+// Rendering
+// ============================================================
+
+/// Renders the in-progress round view. The dealer's second card onwards are hidden.
 fn render_round(game: &GameState) {
   clear();
   println!("--- YOUR HAND ---");
@@ -36,6 +53,7 @@ fn render_round(game: &GameState) {
   println!();
 }
 
+/// Renders the end-of-round result screen with both full hands and session stats.
 fn render_round_result(game: &GameState) {
   clear();
   println!("=== ROUND OVER ===");
@@ -62,6 +80,11 @@ fn render_round_result(game: &GameState) {
   println!("Wins: {wins} | Losses: {losses} | Pushes: {ties}\n");
 }
 
+// ============================================================
+// Game Loop
+// ============================================================
+
+/// Runs a single round: deals, prompts for actions, and loops until the round ends.
 fn round_loop(game: &mut GameState) {
   game.setup_round();
   let mut status;
@@ -94,6 +117,10 @@ fn round_loop(game: &mut GameState) {
     }
   }
 }
+
+// ============================================================
+// Entry Point
+// ============================================================
 
 fn main() {
   let mut game = GameState::new_game();

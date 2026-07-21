@@ -1,117 +1,28 @@
+//! Core game logic for blackjack_rs.
+//!
+//! Provides the deck, card types, game state, and round resolution logic.
+
+// ============================================================
+// Imports
+// ============================================================
+
 use std::fmt;
 
 use rand::rng;
 use rand::seq::SliceRandom;
 
-pub struct GameState {
-  deck: Vec<Card>,
-  status: GameStatus,
-  player_hand: Vec<Card>,
-  dealer_hand: Vec<Card>,
-  wins: u32,
-  losses: u32,
-  ties: u32,
-}
+// ============================================================
+// Types: Enums
+// ============================================================
 
-impl GameState {
-  pub fn new_game() -> Self {
-    Self {
-      deck: {
-        let mut deck = build_deck();
-        shuffle_deck(&mut deck);
-        deck
-      },
-      status: GameStatus::InProgress,
-      player_hand: Vec::new(),
-      dealer_hand: Vec::new(),
-      wins: 0,
-      losses: 0,
-      ties: 0,
-    }
-  }
-  pub fn setup_round(&mut self) {
-    self.status = GameStatus::InProgress;
-    self.player_hand = Vec::new();
-    self.dealer_hand = Vec::new();
-    if self.deck.len() < 10 {
-      self.deck = build_deck();
-      shuffle_deck(&mut self.deck);
-    }
-    let hands = [&mut self.player_hand, &mut self.dealer_hand];
-    for hand in hands {
-      for _ in 0..2 {
-        if let Some(dealt_card) = deal_card(&mut self.deck) {
-          hand.push(dealt_card);
-        }
-      }
-    }
-  }
-  pub fn update(&mut self, action: Action) -> GameStatus {
-    match action {
-      Action::Hit => self.handle_hit(),
-      Action::Stand => self.handle_stand(),
-    }
-  }
-  fn handle_hit(&mut self) -> GameStatus {
-    if let Some(dealt_card) = deal_card(&mut self.deck) {
-      self.player_hand.push(dealt_card);
-    }
-    if calc_hand_value(&self.player_hand) > 21 {
-      self.losses += 1;
-      GameStatus::PlayerBusted
-    } else {
-      GameStatus::InProgress
-    }
-  }
-  fn handle_stand(&mut self) -> GameStatus {
-    while calc_hand_value(&self.dealer_hand) <= 16 {
-      if let Some(dealt_card) = deal_card(&mut self.deck) {
-        self.dealer_hand.push(dealt_card);
-      }
-    }
-    let player_val = calc_hand_value(&self.player_hand);
-    let dealer_val = calc_hand_value(&self.dealer_hand);
-    if player_val > 21 {
-      self.losses += 1;
-      GameStatus::PlayerBusted
-    } else if dealer_val > 21 || player_val > dealer_val {
-      self.wins += 1;
-      GameStatus::PlayerWon
-    } else if dealer_val > player_val {
-      self.losses += 1;
-      GameStatus::DealerWon
-    } else {
-      self.ties += 1;
-      GameStatus::Push
-    }
-  }
-
-  pub fn player_hand(&self) -> &[Card] {
-    &self.player_hand
-  }
-  pub fn dealer_hand(&self) -> &[Card] {
-    &self.dealer_hand
-  }
-  pub fn player_score(&self) -> u8 {
-    calc_hand_value(&self.player_hand)
-  }
-  pub fn dealer_score(&self) -> u8 {
-    calc_hand_value(&self.dealer_hand)
-  }
-  pub fn stats(&self) -> (u32, u32, u32) {
-    (self.wins, self.losses, self.ties)
-  }
-  pub fn status(&self) -> GameStatus {
-    self.status.clone()
-  }
-}
-
+/// A player action during a round.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Action {
   Hit,
   Stand,
 }
 
+/// The current status of a round.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum GameStatus {
   InProgress,
@@ -121,6 +32,7 @@ pub enum GameStatus {
   Push,
 }
 
+/// A card suit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Suit {
   Hearts,
@@ -129,6 +41,7 @@ pub enum Suit {
   Clubs,
 }
 
+/// A card rank, with numeric cards carrying their face value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rank {
   Numeric(u8),
@@ -137,6 +50,10 @@ pub enum Rank {
   King,
   Ace,
 }
+
+// ============================================================
+// Display Implementations
+// ============================================================
 
 impl fmt::Display for Suit {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -167,7 +84,13 @@ impl fmt::Display for Card {
   }
 }
 
+// ============================================================
+// Rank Value
+// ============================================================
+
 impl Rank {
+  /// Returns the blackjack point value of this rank.
+  /// Aces are initially valued at 11; `calc_hand_value` reduces them as needed.
   fn value(&self) -> u8 {
     match self {
       Rank::Ace => 11,
@@ -176,6 +99,10 @@ impl Rank {
     }
   }
 }
+
+// ============================================================
+// Constants
+// ============================================================
 
 const SUITS: [Suit; 4] = [Suit::Hearts, Suit::Diamonds, Suit::Spades, Suit::Clubs];
 const RANKS: [Rank; 13] = [
@@ -194,6 +121,11 @@ const RANKS: [Rank; 13] = [
   Rank::Ace,
 ];
 
+// ============================================================
+// Types: Card
+// ============================================================
+
+/// A single playing card with a rank and suit.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Card {
   pub rank: Rank,
@@ -205,6 +137,136 @@ impl Card {
     self.rank.value()
   }
 }
+
+// ============================================================
+// Game State
+// ============================================================
+
+/// Holds all state for an ongoing blackjack session, including the deck,
+/// both hands, and win/loss/tie counters across rounds.
+pub struct GameState {
+  deck: Vec<Card>,
+  status: GameStatus,
+  player_hand: Vec<Card>,
+  dealer_hand: Vec<Card>,
+  wins: u32,
+  losses: u32,
+  ties: u32,
+}
+
+impl GameState {
+  /// Creates a new session with a freshly built and shuffled deck.
+  pub fn new_game() -> Self {
+    Self {
+      deck: {
+        let mut deck = build_deck();
+        shuffle_deck(&mut deck);
+        deck
+      },
+      status: GameStatus::InProgress,
+      player_hand: Vec::new(),
+      dealer_hand: Vec::new(),
+      wins: 0,
+      losses: 0,
+      ties: 0,
+    }
+  }
+
+  /// Resets hands and deals two cards each to the player and dealer.
+  /// Rebuilds and reshuffles the deck if fewer than 10 cards remain.
+  pub fn setup_round(&mut self) {
+    self.status = GameStatus::InProgress;
+    self.player_hand = Vec::new();
+    self.dealer_hand = Vec::new();
+    if self.deck.len() < 10 {
+      self.deck = build_deck();
+      shuffle_deck(&mut self.deck);
+    }
+    let hands = [&mut self.player_hand, &mut self.dealer_hand];
+    for hand in hands {
+      for _ in 0..2 {
+        if let Some(dealt_card) = deal_card(&mut self.deck) {
+          hand.push(dealt_card);
+        }
+      }
+    }
+  }
+
+  /// Applies a player action and returns the resulting [`GameStatus`].
+  pub fn update(&mut self, action: Action) -> GameStatus {
+    match action {
+      Action::Hit => self.handle_hit(),
+      Action::Stand => self.handle_stand(),
+    }
+  }
+
+  // ----------------------------------------
+  // Action Handlers
+  // ----------------------------------------
+
+  fn handle_hit(&mut self) -> GameStatus {
+    if let Some(dealt_card) = deal_card(&mut self.deck) {
+      self.player_hand.push(dealt_card);
+    }
+    if calc_hand_value(&self.player_hand) > 21 {
+      self.losses += 1;
+      GameStatus::PlayerBusted
+    } else {
+      GameStatus::InProgress
+    }
+  }
+
+  fn handle_stand(&mut self) -> GameStatus {
+    while calc_hand_value(&self.dealer_hand) <= 16 {
+      if let Some(dealt_card) = deal_card(&mut self.deck) {
+        self.dealer_hand.push(dealt_card);
+      }
+    }
+    let player_val = calc_hand_value(&self.player_hand);
+    let dealer_val = calc_hand_value(&self.dealer_hand);
+    if player_val > 21 {
+      self.losses += 1;
+      GameStatus::PlayerBusted
+    } else if dealer_val > 21 || player_val > dealer_val {
+      self.wins += 1;
+      GameStatus::PlayerWon
+    } else if dealer_val > player_val {
+      self.losses += 1;
+      GameStatus::DealerWon
+    } else {
+      self.ties += 1;
+      GameStatus::Push
+    }
+  }
+
+  // ----------------------------------------
+  // Accessors
+  // ----------------------------------------
+
+  pub fn player_hand(&self) -> &[Card] {
+    &self.player_hand
+  }
+  pub fn dealer_hand(&self) -> &[Card] {
+    &self.dealer_hand
+  }
+  pub fn player_score(&self) -> u8 {
+    calc_hand_value(&self.player_hand)
+  }
+  pub fn dealer_score(&self) -> u8 {
+    calc_hand_value(&self.dealer_hand)
+  }
+  /// Returns session totals as `(wins, losses, ties)`.
+  pub fn stats(&self) -> (u32, u32, u32) {
+    (self.wins, self.losses, self.ties)
+  }
+  pub fn status(&self) -> GameStatus {
+    self.status.clone()
+  }
+}
+
+// ============================================================
+// Deck Helpers
+// ============================================================
 
 fn build_deck() -> Vec<Card> {
   let mut deck = Vec::new();
@@ -226,6 +288,12 @@ fn deal_card(deck: &mut Vec<Card>) -> Option<Card> {
   deck.pop()
 }
 
+// ============================================================
+// Hand Value Calculator
+// ============================================================
+
+/// Calculates the best blackjack value for a hand.
+/// Aces are counted as 1 instead of 11 when needed to avoid busting.
 fn calc_hand_value(hand: &[Card]) -> u8 {
   let mut total: u8 = 0;
   let mut aces: u8 = 0;
