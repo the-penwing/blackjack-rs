@@ -5,6 +5,7 @@ use rand::seq::SliceRandom;
 
 pub struct GameState {
   deck: Vec<Card>,
+  status: GameStatus,
   player_hand: Vec<Card>,
   dealer_hand: Vec<Card>,
   wins: u32,
@@ -20,6 +21,7 @@ impl GameState {
         shuffle_deck(&mut deck);
         deck
       },
+      status: GameStatus::InProgress,
       player_hand: Vec::new(),
       dealer_hand: Vec::new(),
       wins: 0,
@@ -28,6 +30,7 @@ impl GameState {
     }
   }
   pub fn setup_round(&mut self) {
+    self.status = GameStatus::InProgress;
     self.player_hand = Vec::new();
     self.dealer_hand = Vec::new();
     if self.deck.len() < 10 {
@@ -100,6 +103,9 @@ impl GameState {
   }
   pub fn stats(&self) -> (u32, u32, u32) {
     (self.wins, self.losses, self.ties)
+  }
+  pub fn status(&self) -> GameStatus {
+    self.status.clone()
   }
 }
 
@@ -191,7 +197,7 @@ const RANKS: [Rank; 13] = [
   Rank::Ace,
 ];
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Card {
   pub rank: Rank,
   pub suit: Suit,
