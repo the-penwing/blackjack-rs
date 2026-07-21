@@ -1,4 +1,4 @@
-use blackjack_rs;
+use blackjack_rs::{self, Action, GameState, GameStatus};
 use std::{
   io::{self, Write},
   process::Command,
@@ -20,6 +20,83 @@ fn clear() {
     Command::new("cls");
   } else {
     Command::new("clear");
+  }
+}
+
+fn render_round(game: &GameState) {
+  clear();
+  println!("Your hand:\n");
+  for card in game.player_hand() {
+    println!("{}", card);
+  }
+  println!("\nTotal Value: {}\n", game.player_score());
+  println!("Dealers Hand:\n");
+  let dealers_hand = game.dealer_hand();
+  for card in dealers_hand {
+    if dealers_hand.first() == Some(card) {
+      println!("{}", card);
+    } else {
+      println!("???");
+    }
+  }
+}
+
+fn render_round_result(game: &GameState) {
+  clear();
+  println!("Your Hand: \n");
+  for card in game.player_hand() {
+    println!("{}", card);
+  }
+  println!("\n Total Value: {}\n", game.player_score());
+  println!("Dealers Hand:\n");
+  for card in game.dealer_hand() {
+    println!("{}", card);
+  }
+  println!("\n Dealer Value: {}", game.dealer_score());
+  match game.status() {
+    GameStatus::PlayerBusted => println!("You Busted!!"),
+    GameStatus::PlayerWon => println!("You Won!!"),
+    GameStatus::DealerWon => println!("Dealer Won!!"),
+    GameStatus::Push => println!("Push!! (Tie)"),
+    GameStatus::InProgress => print!(""),
+  }
+  let (wins, losses, ties) = game.stats();
+  println!("Stats:");
+  println!("Wins: {wins}\nLosses: {losses}\nPushes: {ties}");
+}
+
+fn round_loop(game: &mut GameState) {
+  game.setup_round();
+  render_round(&game);
+
+  let mut status = game.status();
+
+  loop {
+    println!("Hit or Stand:");
+    println!("1) Hit");
+    println!("2) Stand");
+    let prompt = "Action";
+    let choice_raw = get_input(&prompt);
+    let choice: u8 = match choice_raw.parse::<u8>() {
+      Ok(1) => 1,
+      Ok(2) => 2,
+      _ => {
+        println!("Please input 1 or 2");
+        continue;
+      },
+    };
+    let action = match choice {
+      1 => Action::Hit,
+      2 => Action::Stand,
+      _ => unreachable!(),
+    };
+
+    status = game.update(action);
+    render_round(&game);
+
+    if status != GameStatus::InProgress {
+      break;
+    }
   }
 }
 
