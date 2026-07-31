@@ -34,7 +34,7 @@
         eza
 
         # RUST OVERLAY
-        (rust-bin.stable.latest.default.override {
+        (rust-bin.stable."1.97.1".default.override {
           extensions = ["rust-src" "rust-analyzer"];
           targets = [
             "i686-unknown-linux-musl"
