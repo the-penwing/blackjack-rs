@@ -1,5 +1,5 @@
 {
-  description = "Rust devshell for blackjack-rs (optimised for my thinkpad)";
+  description = "Rust devshell and build system for blackjack-rs (optimised for my thinkpad)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -19,10 +19,47 @@
 
     pkgs = import nixpkgs {
       inherit system;
-      overlays = [(import rust-overlay)];
+      overlays = [rust-overlay.overlays.default];
+    };
+
+    rustToolchain = pkgs.rust-bin.stable."1.97.1".default.override {
+      extensions = ["rust-src" "rust-analyzer"];
+      targets = [
+        "i686-unknown-linux-musl"
+        "aarch64-unknown-linux-gnu"
+        "aarch64-unknown-linux-musl"
+        "x86_64-pc-windows-gnu"
+        "aarch64-apple-darwin"
+        "x86_64-apple-darwin"
+        "x86_64-unknown-linux-gnu"
+        "x86_64-unknown-linux-musl"
+      ];
+    };
+
+    customRustPlatform = pkgs.makeRustPlatform {
+      cargo = rustToolchain;
+      rustc = rustToolchain;
     };
   in {
+    packages.${system}.default = customRustPlatform.buildRustPackage {
+      pname = "blackjack-rs";
+      version = "0.1.0";
+
+      src = ./.;
+      cargoLock.lockFile = ./Cargo.lock;
+
+      nativeBuildInputs = with pkgs; [
+        clang
+        mold
+        gcc
+      ];
+
+      CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C linker=clang -C link-arg=-fuse-ld=mold -C target-cpu=native";
+    };
+
     devShells.${system}.default = pkgs.mkShell {
+      inputsFrom = [self.packages.${system}.default];
+
       buildInputs = with pkgs; [
         # CORE UTILS FOR EASIER DEVELOPMENT
         git
@@ -33,30 +70,13 @@
         bat
         eza
 
-        # RUST OVERLAY
-        (rust-bin.stable."1.97.1".default.override {
-          extensions = ["rust-src" "rust-analyzer"];
-          targets = [
-            "i686-unknown-linux-musl"
-            "aarch64-unknown-linux-gnu"
-            "aarch64-unknown-linux-musl"
-            "x86_64-pc-windows-gnu"
-            "aarch64-apple-darwin"
-            "x86_64-apple-darwin"
-            "x86_64-unknown-linux-gnu"
-            "x86_64-unknown-linux-musl"
-          ];
-        })
-
-        # TOOLSET FOR CROSS-COMPILING WITH ZIG
-        gcc
+        # CROSS COMP TOOLS FOR LOCAL DEV
         cargo-zigbuild
         zig
-
-        # PERFORMANCE TOOLING
-        mold
-        clang
       ];
+
+      nativeBuildInputs = [rustToolchain];
+
       shellHook = ''
         echo "Rust DevShell Loaded"
         echo "  Rust: $(cargo --version)"
@@ -64,7 +84,6 @@
         echo "  Zig: $(zig version)"
         echo "  Linker: mold $(mold --version | head -n1)"
 
-        # TARGET-SPECIFIC RUSTFLAGS
         export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS="-C linker=clang -C link-arg=-fuse-ld=mold -C target-cpu=native"
         export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-cpu=x86-64-v3"
         export CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-cpu=pentium4"
