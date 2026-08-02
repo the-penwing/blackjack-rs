@@ -1,5 +1,5 @@
 {
-  description = "Rust devshell and build system for blackjack-rs (optimised for my thinkpad)";
+  description = "Rust devshell and build system for blackjack-rs";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -10,17 +10,14 @@
 
   outputs = inputs @ {flake-parts, ...}:
     flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "x86_64-darwin"
-        "aarch64-darwin"
-      ];
+      systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+
       perSystem = {system, ...}: let
         pkgs = import inputs.nixpkgs {
           inherit system;
           overlays = [(import inputs.rust-overlay)];
         };
+
         rustToolchain = pkgs.rust-bin.stable."1.97.1".default.override {
           extensions = ["rust-src" "rust-analyzer"];
           targets = [
@@ -34,47 +31,25 @@
             "x86_64-unknown-linux-musl"
           ];
         };
+
         craneLib = (inputs.crane.mkLib pkgs).overrideToolchain rustToolchain;
 
-        src = craneLib.cleanCargoSource ./.;
-
         commonArgs = {
-          inherit src;
+          src = craneLib.cleanCargoSource ./.;
           strictDeps = true;
 
-          nativeBuildInputs = with pkgs; [
-            clang
-            mold
-            gcc
-          ];
+          nativeBuildInputs = with pkgs; [clang mold gcc];
           CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS = "-C linker=clang -C link-arg=-fuse-ld=mold -C target-cpu=native";
         };
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
 
-        blackjack-rs = craneLib.buildPackage (commonArgs // {inherit cargoArtifacts;});
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in {
-        packages.default = blackjack-rs;
+        packages.default = craneLib.buildPackage (commonArgs // {inherit cargoArtifacts;});
 
         devShells.default = craneLib.devShell {
-          checks = self.checks.${system} or {};
-
-          packages = with pkgs; [
-            git
-            lazygit
-            just
-            ripgrep
-            bat
-            eza
-            cargo-zigbuild
-            zig
-          ];
+          packages = with pkgs; [git lazygit just ripgrep bat eza cargo-zigbuild zig];
 
           shellHook = ''
-            echo "blackjack-rs devshell loaded"
-            echo "  Rust: $(cargo --version)"
-            echo "  Zig: $(zig version)"
-            echo "  Linker: mold $(mold --version | head -n1)"
-
             export CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS="-C linker=clang -C link-arg=-fuse-ld=mold -C target-cpu=native"
             export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-cpu=x86-64-v3"
             export CARGO_TARGET_I686_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-C target-cpu=pentium4"
