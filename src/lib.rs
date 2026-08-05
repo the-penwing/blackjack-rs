@@ -23,7 +23,7 @@ pub enum Action {
 }
 
 /// The current status of a round.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameStatus {
   InProgress,
   PlayerBusted,
@@ -126,7 +126,7 @@ const RANKS: [Rank; 13] = [
 // ============================================================
 
 /// A single playing card with a rank and suit.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Card {
   pub rank: Rank,
   pub suit: Suit,
@@ -214,7 +214,7 @@ impl GameState {
     } else {
       GameStatus::InProgress
     };
-    self.status.clone()
+    self.status
   }
 
   fn handle_stand(&mut self) -> GameStatus {
@@ -261,7 +261,7 @@ impl GameState {
     (self.wins, self.losses, self.ties)
   }
   pub fn status(&self) -> GameStatus {
-    self.status.clone()
+    self.status
   }
 }
 
