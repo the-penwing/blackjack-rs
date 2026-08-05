@@ -208,12 +208,13 @@ impl GameState {
     if let Some(dealt_card) = deal_card(&mut self.deck) {
       self.player_hand.push(dealt_card);
     }
-    if calc_hand_value(&self.player_hand) > 21 {
+    self.status = if calc_hand_value(&self.player_hand) > 21 {
       self.losses += 1;
       GameStatus::PlayerBusted
     } else {
       GameStatus::InProgress
-    }
+    };
+    self.status.clone()
   }
 
   fn handle_stand(&mut self) -> GameStatus {
