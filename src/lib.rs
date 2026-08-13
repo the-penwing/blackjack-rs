@@ -225,7 +225,7 @@ impl GameState {
     }
     let player_val = calc_hand_value(&self.player_hand);
     let dealer_val = calc_hand_value(&self.dealer_hand);
-    if player_val > 21 {
+    self.status = if player_val > 21 {
       self.losses += 1;
       GameStatus::PlayerBusted
     } else if dealer_val > 21 || player_val > dealer_val {
@@ -237,7 +237,8 @@ impl GameState {
     } else {
       self.ties += 1;
       GameStatus::Push
-    }
+    };
+    self.status
   }
 
   // ----------------------------------------
