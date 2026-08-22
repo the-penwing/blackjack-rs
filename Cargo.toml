@@ -1,13 +1,12 @@
 [package]
 name = "blackjack-rs"
-description = "A simple blackjack libary + CLI implementation"
-keywords = ["game", "blackjack", "libary", "cli"]
-repository = "https://github.com/the-penwing/blackjack-rs"
 version = "0.1.0"
 edition = "2024"
-rust-version = "1.97.1"
+description = "A simple blackjack libary + CLI implementation"
+repository = "https://github.com/the-penwing/blackjack-rs"
 license = "AGPL-3.0-only"
 license-file = "LICENSE"
+keywords = ["blackjack", "cli", "game", "libary"]
 
 [dependencies]
 rand = "0.10.2"
