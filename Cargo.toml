@@ -5,7 +5,6 @@ edition = "2024"
 description = "A simple blackjack libary + CLI implementation"
 repository = "https://github.com/the-penwing/blackjack-rs"
 license = "AGPL-3.0-only"
-license-file = "LICENSE"
 keywords = ["blackjack", "cli", "game", "libary"]
 
 [dependencies]
