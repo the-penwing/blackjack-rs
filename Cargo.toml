@@ -9,3 +9,9 @@ keywords = ["blackjack", "cli", "game", "libary"]
 
 [dependencies]
 rand = "0.10.2"
+
+[profile.release]
+opt-level = "s"
+strip = true
+lto = "thin"
+codegen-units = 1
