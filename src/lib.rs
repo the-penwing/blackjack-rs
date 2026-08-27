@@ -227,6 +227,11 @@ impl GameState {
     };
     self.current_bet = 0
   }
+
+  pub fn reset_status(&mut self) {
+    self.status = GameStatus::AwaitingBet;
+  }
+
   // ----------------------------------------
   // Action Handlers
   // ----------------------------------------
