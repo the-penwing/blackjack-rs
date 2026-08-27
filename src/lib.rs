@@ -33,6 +33,13 @@ pub enum GameStatus {
   Push,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum BetError {
+  ZeroAmount,
+  InsufficientBalance,
+  WrongStatus,
+}
+
 /// A card suit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Suit {
@@ -153,6 +160,8 @@ pub struct GameState {
   wins: u32,
   losses: u32,
   ties: u32,
+  balance: u32,
+  current_bet: u32,
 }
 
 impl GameState {
@@ -170,6 +179,8 @@ impl GameState {
       wins: 0,
       losses: 0,
       ties: 0,
+      balance: 2000,
+      current_bet: 0,
     }
   }
 
@@ -204,6 +215,22 @@ impl GameState {
   // ----------------------------------------
   // Action Handlers
   // ----------------------------------------
+
+  pub fn place_bet(&mut self, real_amount: u32) -> Result<(), BetError> {
+    let amount: u32 = real_amount * 2;
+    if self.status != GameStatus::AwaitingBet {
+      Err(BetError::WrongStatus)
+    } else if real_amount == 0 {
+      Err(BetError::ZeroAmount)
+    } else if amount > self.balance {
+      Err(BetError::InsufficientBalance)
+    } else {
+      self.balance -= amount;
+      self.current_bet = amount;
+      self.status = GameStatus::InProgress;
+      Ok(())
+    }
+  }
 
   fn handle_hit(&mut self) -> GameStatus {
     if let Some(dealt_card) = deal_card(&mut self.deck) {
