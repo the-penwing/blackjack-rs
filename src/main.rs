@@ -6,6 +6,7 @@
 // Imports
 // ============================================================
 
+use blackjack_rs::{self, Action, BetError, GameState, GameStatus};
 use blackjack_rs::{self, Action, GameState, GameStatus};
 use std::io::{self, Write};
 
@@ -77,12 +78,46 @@ fn render_round_result(game: &GameState) {
   let (wins, losses, ties) = game.stats();
   println!("--- SESSION STATS ---");
   println!("Wins: {wins} | Losses: {losses} | Pushes: {ties}\n");
+fn render_betting(game: &GameState) {
+  clear();
+  println!("--- Betting Time ---");
+  println!("You have: ${}", game.balance());
 }
 
 // ============================================================
 // Game Loop
 // ============================================================
 
+fn betting_loop(game: &mut GameState) {
+  loop {
+    render_betting(game);
+    println!();
+    let amount_raw = get_input("How much to bet? ");
+    let amount: u32 = match amount_raw.parse() {
+      Ok(num) => num,
+      Err(_) => {
+        println!("Please input a valid number");
+        continue;
+      },
+    };
+
+    match game.place_bet(amount) {
+      Err(BetError::ZeroAmount) => {
+        println!("You can't place a bet of $0!");
+      },
+      Err(BetError::InsufficientBalance) => {
+        println!("You don't have enough money!");
+      },
+      Err(BetError::WrongStatus) => {
+        panic!("bet placed with wrong status: {:?}", game.status());
+      },
+      Ok(_) => {
+        println!("Bet placed for ${}!", amount);
+        break;
+      },
+    }
+  }
+}
 /// Runs a single round: deals, prompts for actions, and loops until the round ends.
 fn round_loop(game: &mut GameState) {
   game.setup_round();
@@ -127,8 +162,10 @@ fn round_loop(game: &mut GameState) {
 fn main() {
   let mut game = GameState::new_game();
   loop {
+    betting_loop(&mut game);
     round_loop(&mut game);
     render_round_result(&game);
+    game.reset_status();
 
     let keep_playing = loop {
       let prompt = "Play again? (y/n): ";
