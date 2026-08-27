@@ -25,19 +25,26 @@ pub enum Action {
 /// The current status of a round.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameStatus {
+  /// Waiting for the player to place a bet via `place_bet`.
   AwaitingBet,
+  /// A round is underway; further `Action`s are expected.
   InProgress,
   PlayerBusted,
   PlayerWon,
+  /// Player was dealt a natural 21 (ace + ten-value card) on the deal.
   PlayerBlackjack,
   DealerWon,
   Push,
 }
 
+/// Reasons `place_bet` can fail.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum BetError {
+  /// A bet of 0 was attempted.
   ZeroAmount,
+  /// The bet exceeds the player's current balance.
   InsufficientBalance,
+  /// `place_bet` was called while status wasn't `AwaitingBet`.
   WrongStatus,
 }
 
@@ -153,6 +160,12 @@ impl Card {
 
 /// Holds all state for an ongoing blackjack session, including the deck,
 /// both hands, and win/loss/tie counters across rounds.
+///
+/// `balance` and `current_bet` are stored internally at 2x their real
+/// chip value ("half-chip units"), so a 3:2 blackjack payout is always
+/// computed as an exact integer (`current_bet * 3`) with no rounding
+/// loss. Callers only ever see real chip amounts via `balance()`,
+/// `current_bet()`, and `place_bet()`, which convert at the boundary.
 pub struct GameState {
   deck: Vec<Card>,
   status: GameStatus,
@@ -187,6 +200,11 @@ impl GameState {
 
   /// Resets hands and deals two cards each to the player and dealer.
   /// Rebuilds and reshuffles the deck if fewer than 10 cards remain.
+  ///
+  /// If the deal is a natural blackjack, resolves the round immediately:
+  /// sets status to `PlayerBlackjack`, records the win, and pays out.
+  /// Callers must check `status()` after calling this before prompting
+  /// for a hit/stand action.
   pub fn setup_round(&mut self) {
     self.status = GameStatus::InProgress;
     self.player_hand = Vec::new();
@@ -218,24 +236,22 @@ impl GameState {
     }
   }
 
-  fn resolve_payout(&mut self, status: GameStatus) {
-    match status {
-      GameStatus::PlayerBlackjack => self.balance += self.current_bet * 3,
-      GameStatus::PlayerWon => self.balance += self.current_bet * 2,
-      GameStatus::Push => self.balance += self.current_bet,
-      _ => {},
-    };
-    self.current_bet = 0
-  }
-
+  /// Resets status to `AwaitingBet`, readying the game for the next
+  /// `place_bet` call. Must be called after the current round's result
+  /// has been read/rendered, since it discards the terminal status.
   pub fn reset_status(&mut self) {
     self.status = GameStatus::AwaitingBet;
   }
 
   // ----------------------------------------
-  // Action Handlers
+  // Betting & Payout
   // ----------------------------------------
 
+  /// Places a bet of `real_amount` chips, deducting it from `balance`
+  /// and moving status from `AwaitingBet` to `InProgress`.
+  ///
+  /// `real_amount` is a real chip amount, not the internal half-chip
+  /// representation — this converts at the boundary.
   pub fn place_bet(&mut self, real_amount: u32) -> Result<(), BetError> {
     let amount: u32 = real_amount * 2;
     if self.status != GameStatus::AwaitingBet {
@@ -252,6 +268,29 @@ impl GameState {
     }
   }
 
+  /// Pays out `current_bet` according to the round's terminal status,
+  /// then clears `current_bet` back to 0.
+  ///
+  /// Amounts are stored at 2x real value (see struct docs), so a
+  /// blackjack's 3:2 payout is `current_bet * 3` and a normal win's 1:1
+  /// payout is `current_bet * 2` — both exact integers of the doubled
+  /// value. Losses forfeit the bet outright (no arm needed).
+  fn resolve_payout(&mut self, status: GameStatus) {
+    match status {
+      GameStatus::PlayerBlackjack => self.balance += self.current_bet * 3,
+      GameStatus::PlayerWon => self.balance += self.current_bet * 2,
+      GameStatus::Push => self.balance += self.current_bet,
+      _ => {},
+    };
+    self.current_bet = 0;
+  }
+
+  // ----------------------------------------
+  // Action Handlers
+  // ----------------------------------------
+
+  /// Deals one card to the player. Busts the round if this pushes their
+  /// hand over 21.
   fn handle_hit(&mut self) -> GameStatus {
     if let Some(dealt_card) = deal_card(&mut self.deck) {
       self.player_hand.push(dealt_card);
@@ -266,6 +305,8 @@ impl GameState {
     self.status
   }
 
+  /// Plays out the dealer's hand (hitting until 17+) and resolves the
+  /// round's final outcome.
   fn handle_stand(&mut self) -> GameStatus {
     while calc_hand_value(&self.dealer_hand) <= 16 {
       if let Some(dealt_card) = deal_card(&mut self.deck) {
@@ -301,29 +342,40 @@ impl GameState {
   pub fn player_hand(&self) -> &[Card] {
     &self.player_hand
   }
+
   pub fn dealer_hand(&self) -> &[Card] {
     &self.dealer_hand
   }
+
   pub fn player_score(&self) -> u8 {
     calc_hand_value(&self.player_hand)
   }
+
   pub fn dealer_score(&self) -> u8 {
     calc_hand_value(&self.dealer_hand)
   }
+
+  /// Current balance in real chip units (internal half-chip value / 2).
   pub fn balance(&self) -> u32 {
     self.balance / 2
   }
+
+  /// Current bet in real chip units (internal half-chip value / 2).
   pub fn current_bet(&self) -> u32 {
     self.current_bet / 2
   }
+
   /// Returns session totals as `(wins, losses, ties)`.
   pub fn stats(&self) -> (u32, u32, u32) {
     (self.wins, self.losses, self.ties)
   }
+
   pub fn status(&self) -> GameStatus {
     self.status
   }
 
+  /// True if the player's current hand is a natural blackjack
+  /// (an ace + ten-value card dealt as the opening two cards).
   pub fn is_nat_blackjack(&self) -> bool {
     self.player_hand.len() == 2 && calc_hand_value(&self.player_hand) == 21
   }
@@ -333,6 +385,7 @@ impl GameState {
 // Deck Helpers
 // ============================================================
 
+/// Builds a fresh, unshuffled 52-card deck.
 fn build_deck() -> Vec<Card> {
   let mut deck = Vec::new();
 
@@ -344,11 +397,13 @@ fn build_deck() -> Vec<Card> {
   deck
 }
 
+/// Shuffles a deck in place.
 fn shuffle_deck(deck: &mut [Card]) {
   let mut rng = rng();
   deck.shuffle(&mut rng);
 }
 
+/// Deals (pops) the top card from the deck, if any remain.
 fn deal_card(deck: &mut Vec<Card>) -> Option<Card> {
   deck.pop()
 }
