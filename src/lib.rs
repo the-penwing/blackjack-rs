@@ -290,6 +290,12 @@ impl GameState {
   pub fn dealer_score(&self) -> u8 {
     calc_hand_value(&self.dealer_hand)
   }
+  pub fn balance(&self) -> u32 {
+    self.balance / 2
+  }
+  pub fn current_bet(&self) -> u32 {
+    self.current_bet / 2
+  }
   /// Returns session totals as `(wins, losses, ties)`.
   pub fn stats(&self) -> (u32, u32, u32) {
     (self.wins, self.losses, self.ties)
