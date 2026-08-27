@@ -25,6 +25,7 @@ pub enum Action {
 /// The current status of a round.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GameStatus {
+  AwaitingBet,
   InProgress,
   PlayerBusted,
   PlayerWon,
@@ -163,7 +164,7 @@ impl GameState {
         shuffle_deck(&mut deck);
         deck
       },
-      status: GameStatus::InProgress,
+      status: GameStatus::AwaitingBet,
       player_hand: Vec::new(),
       dealer_hand: Vec::new(),
       wins: 0,
