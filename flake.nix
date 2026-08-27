@@ -4,9 +4,13 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
-  outputs = inputs @ {flake-parts, ...}:
+  outputs = inputs @ {
+    nixpkgs,
+    flake-parts,
+    ...
+  }:
     flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = ["x86_64-linux" "aarch64-linux"];
+      systems = nixpkgs.lib.systems.flakeExposed;
       perSystem = {system, ...}: let
         pkgs = import inputs.nixpkgs {
           inherit system;
