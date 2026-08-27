@@ -29,6 +29,7 @@ pub enum GameStatus {
   InProgress,
   PlayerBusted,
   PlayerWon,
+  PlayerBlackjack,
   DealerWon,
   Push,
 }
@@ -202,6 +203,10 @@ impl GameState {
         }
       }
     }
+    if self.is_nat_blackjack() {
+      self.status = GameStatus::PlayerBlackjack;
+      self.wins += 1
+    };
   }
 
   /// Applies a player action and returns the resulting [`GameStatus`].
@@ -291,6 +296,10 @@ impl GameState {
   }
   pub fn status(&self) -> GameStatus {
     self.status
+  }
+
+  pub fn is_nat_blackjack(&self) -> bool {
+    self.player_hand.len() == 2 && calc_hand_value(&self.player_hand) == 21
   }
 }
 
