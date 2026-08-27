@@ -205,7 +205,8 @@ impl GameState {
     }
     if self.is_nat_blackjack() {
       self.status = GameStatus::PlayerBlackjack;
-      self.wins += 1
+      self.wins += 1;
+      self.resolve_payout(GameStatus::PlayerBlackjack);
     };
   }
 
@@ -217,6 +218,15 @@ impl GameState {
     }
   }
 
+  fn resolve_payout(&mut self, status: GameStatus) {
+    match status {
+      GameStatus::PlayerBlackjack => self.balance += self.current_bet * 3,
+      GameStatus::PlayerWon => self.balance += self.current_bet * 2,
+      GameStatus::Push => self.balance += self.current_bet,
+      _ => {},
+    };
+    self.current_bet = 0
+  }
   // ----------------------------------------
   // Action Handlers
   // ----------------------------------------
@@ -243,6 +253,7 @@ impl GameState {
     }
     self.status = if calc_hand_value(&self.player_hand) > 21 {
       self.losses += 1;
+      self.resolve_payout(GameStatus::PlayerBusted);
       GameStatus::PlayerBusted
     } else {
       GameStatus::InProgress
@@ -260,15 +271,19 @@ impl GameState {
     let dealer_val = calc_hand_value(&self.dealer_hand);
     self.status = if player_val > 21 {
       self.losses += 1;
+      self.resolve_payout(GameStatus::PlayerBusted);
       GameStatus::PlayerBusted
     } else if dealer_val > 21 || player_val > dealer_val {
       self.wins += 1;
+      self.resolve_payout(GameStatus::PlayerWon);
       GameStatus::PlayerWon
     } else if dealer_val > player_val {
       self.losses += 1;
+      self.resolve_payout(GameStatus::DealerWon);
       GameStatus::DealerWon
     } else {
       self.ties += 1;
+      self.resolve_payout(GameStatus::Push);
       GameStatus::Push
     };
     self.status
