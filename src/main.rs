@@ -87,6 +87,9 @@ fn render_round_result(game: &GameState) {
 fn round_loop(game: &mut GameState) {
   game.setup_round();
   let mut status;
+  if game.status() == GameStatus::PlayerBlackjack {
+    return;
+  }
 
   loop {
     render_round(game);
