@@ -8,6 +8,7 @@ license = "AGPL-3.0-only"
 keywords = ["blackjack", "cli", "game", "libary"]
 
 [dependencies]
+clearscreen = "4.0.6"
 rand = "0.10.2"
 
 [profile.release]

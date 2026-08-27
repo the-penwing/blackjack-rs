@@ -25,8 +25,7 @@ fn get_input(prompt: &str) -> String {
 }
 
 fn clear() {
-  print!("\x1B[2J\x1B[1;1H");
-  io::stdout().flush().unwrap();
+  clearscreen::clear().expect("Failed to clear screen")
 }
 
 // ============================================================
