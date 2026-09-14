@@ -1,5 +1,6 @@
 use blackjack_rs::{self, Action, BetError, GameState, GameStatus};
 use std::io::{self, Write};
+
 fn get_input(prompt: &str) -> String {
   print!("{}", prompt);
   io::stdout().flush().unwrap();
@@ -10,9 +11,11 @@ fn get_input(prompt: &str) -> String {
     .expect("Failed to read line");
   input.trim().to_string()
 }
+
 fn clear() {
   clearscreen::clear().expect("Failed to clear screen")
 }
+
 fn render_player_hand(game: &GameState) {
   println!("--- YOUR HAND ---");
   for card in game.player_hand() {
@@ -72,6 +75,10 @@ fn render_round_result(game: &GameState) {
     _ => {},
   }
   render_stats(game);
+  if game.balance() == 0 {
+    println!();
+    println!("You're out of cash!")
+  }
 }
 
 fn render_betting(game: &GameState) {
@@ -144,8 +151,21 @@ fn round_loop(game: &mut GameState) {
   }
 }
 
+fn playing_again(prompt: &str) -> bool {
+  loop {
+    let choice_raw = get_input(prompt);
+    match choice_raw.to_uppercase().as_str() {
+      "Y" => break true,
+      "N" => break false,
+      _ => println!("Please enter either 'y' or 'n'"),
+    };
+  }
+}
+
 fn main() {
   let mut game = GameState::new_game();
+  let non_broke_prompt: String = String::from("Play again? (y/n): ");
+  let broke_prompt: String = String::from("Restart from scratch? (y/n): ");
 
   loop {
     betting_loop(&mut game);
@@ -153,18 +173,19 @@ fn main() {
     render_round_result(&game);
     game.reset_status();
 
-    let keep_playing = loop {
-      let choice_raw = get_input("Play again? (y/n): ");
-      match choice_raw.to_uppercase().as_str() {
-        "Y" => break true,
-        "N" => break false,
-        _ => println!("Please enter either 'y' or 'n'"),
-      };
-    };
+    let is_broke: bool = game.balance() == 0;
 
-    if !keep_playing {
+    let is_playing_again: bool = if is_broke {
+      playing_again(&broke_prompt)
+    } else {
+      playing_again(&non_broke_prompt)
+    };
+    if !is_playing_again {
       println!("Thanks for Playing!!");
       break;
+    }
+    if is_broke {
+      game = GameState::new_game();
     }
   }
 }
