@@ -1,5 +1,6 @@
 use blackjack_rs::{self, Action, BetError, GameState, GameStatus};
 use std::io::{self, Write};
+
 fn get_input(prompt: &str) -> String {
   print!("{}", prompt);
   io::stdout().flush().unwrap();
@@ -10,9 +11,11 @@ fn get_input(prompt: &str) -> String {
     .expect("Failed to read line");
   input.trim().to_string()
 }
+
 fn clear() {
   clearscreen::clear().expect("Failed to clear screen")
 }
+
 fn render_player_hand(game: &GameState) {
   println!("--- YOUR HAND ---");
   for card in game.player_hand() {
@@ -144,6 +147,17 @@ fn round_loop(game: &mut GameState) {
   }
 }
 
+fn playing_again() -> bool {
+  loop {
+    let choice_raw = get_input("Play again? (y/n): ");
+    match choice_raw.to_uppercase().as_str() {
+      "Y" => break true,
+      "N" => break false,
+      _ => println!("Please enter either 'y' or 'n'"),
+    };
+  }
+}
+
 fn main() {
   let mut game = GameState::new_game();
 
@@ -153,16 +167,8 @@ fn main() {
     render_round_result(&game);
     game.reset_status();
 
-    let keep_playing = loop {
-      let choice_raw = get_input("Play again? (y/n): ");
-      match choice_raw.to_uppercase().as_str() {
-        "Y" => break true,
-        "N" => break false,
-        _ => println!("Please enter either 'y' or 'n'"),
-      };
-    };
-
-    if !keep_playing {
+    let playing_again = playing_again();
+    if !playing_again {
       println!("Thanks for Playing!!");
       break;
     }
