@@ -1,20 +1,5 @@
-//! CLI entry point for blackjack_rs.
-//!
-//! Handles rendering, input, and the game loop.
-
-// ============================================================
-// Imports
-// ============================================================
-
 use blackjack_rs::{self, Action, BetError, GameState, GameStatus};
 use std::io::{self, Write};
-
-// ============================================================
-// Input / Terminal Utilities
-// ============================================================
-
-/// Prints `prompt` without a newline, flushes stdout so it's visible
-/// immediately, then blocks for a line of input and returns it trimmed.
 fn get_input(prompt: &str) -> String {
   print!("{}", prompt);
   io::stdout().flush().unwrap();
@@ -25,20 +10,9 @@ fn get_input(prompt: &str) -> String {
     .expect("Failed to read line");
   input.trim().to_string()
 }
-
-/// Clears the terminal, including scrollback, via the `clearscreen` crate
-/// rather than a hand-rolled ANSI escape sequence (which doesn't reliably
-/// clear scrollback across terminals/platforms).
 fn clear() {
   clearscreen::clear().expect("Failed to clear screen")
 }
-
-// ============================================================
-// Rendering
-// ============================================================
-
-/// Prints the player's hand and running total. Shared by the in-progress
-/// and end-of-round views.
 fn render_player_hand(game: &GameState) {
   println!("--- YOUR HAND ---");
   for card in game.player_hand() {
@@ -47,9 +21,6 @@ fn render_player_hand(game: &GameState) {
   println!("Total Value: {}", game.player_score());
 }
 
-/// Prints the dealer's hand. While a round is in progress, all but the
-/// dealer's first card are hidden; once the round has ended, the full
-/// hand and total are revealed.
 fn render_dealer_hand(game: &GameState) {
   println!("--- DEALERS HAND ---");
 
@@ -70,14 +41,12 @@ fn render_dealer_hand(game: &GameState) {
   }
 }
 
-/// Prints cumulative session win/loss/push counts.
 fn render_stats(game: &GameState) {
   let (wins, losses, ties) = game.stats();
   println!("--- SESSION STATS ---");
   println!("Wins: {wins} | Losses: {losses} | Pushes: {ties}\n");
 }
 
-/// Renders the in-progress round view. The dealer's second card onwards are hidden.
 fn render_round(game: &GameState) {
   clear();
   render_player_hand(game);
@@ -86,9 +55,6 @@ fn render_round(game: &GameState) {
   println!();
 }
 
-/// Renders the end-of-round result screen with both full hands and session stats.
-/// Must be called before `game.reset_status()`, since it reads the round's
-/// terminal `GameStatus` to decide which result message to print.
 fn render_round_result(game: &GameState) {
   clear();
   println!("=== ROUND OVER ===");
@@ -108,23 +74,12 @@ fn render_round_result(game: &GameState) {
   render_stats(game);
 }
 
-/// Renders the pre-round betting screen showing the player's current balance.
 fn render_betting(game: &GameState) {
   clear();
   println!("--- Betting Time ---");
   println!("You have: ${}", game.balance());
 }
 
-// ============================================================
-// Game Loop
-// ============================================================
-
-/// Prompts for a bet until one is placed successfully.
-///
-/// Requires `game.status()` to be `AwaitingBet` on entry (guaranteed by
-/// `main`'s loop, which resets status after each round resolves).
-/// `WrongStatus` should be unreachable given that invariant, so it panics
-/// loudly instead of failing silently if it's ever hit.
 fn betting_loop(game: &mut GameState) {
   loop {
     render_betting(game);
@@ -156,18 +111,9 @@ fn betting_loop(game: &mut GameState) {
   }
 }
 
-/// Runs a single round: deals, prompts for actions, and loops until the round ends.
-///
-/// Leaves `game.status()` set to the round's terminal outcome (e.g.
-/// `PlayerWon`, `PlayerBusted`, `PlayerBlackjack`) — the caller is
-/// responsible for rendering that result and calling `reset_status()`
-/// afterwards, so status stays valid for `render_round_result` to read.
 fn round_loop(game: &mut GameState) {
   game.setup_round();
 
-  // A natural blackjack is already resolved by `setup_round`; skip
-  // straight past the hit/stand prompt instead of asking for an action
-  // on a round that's already over.
   if game.status() == GameStatus::PlayerBlackjack {
     return;
   }
@@ -197,10 +143,6 @@ fn round_loop(game: &mut GameState) {
     }
   }
 }
-
-// ============================================================
-// Entry Point
-// ============================================================
 
 fn main() {
   let mut game = GameState::new_game();
