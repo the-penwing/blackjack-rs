@@ -75,6 +75,10 @@ fn render_round_result(game: &GameState) {
     _ => {},
   }
   render_stats(game);
+  if game.balance() == 0 {
+    println!();
+    println!("You're out of cash!")
+  }
 }
 
 fn render_betting(game: &GameState) {
@@ -147,9 +151,9 @@ fn round_loop(game: &mut GameState) {
   }
 }
 
-fn playing_again() -> bool {
+fn playing_again(prompt: &str) -> bool {
   loop {
-    let choice_raw = get_input("Play again? (y/n): ");
+    let choice_raw = get_input(prompt);
     match choice_raw.to_uppercase().as_str() {
       "Y" => break true,
       "N" => break false,
@@ -160,6 +164,8 @@ fn playing_again() -> bool {
 
 fn main() {
   let mut game = GameState::new_game();
+  let non_broke_prompt: String = String::from("Play again? (y/n): ");
+  let broke_prompt: String = String::from("Restart from scratch? (y/n): ");
 
   loop {
     betting_loop(&mut game);
@@ -167,10 +173,19 @@ fn main() {
     render_round_result(&game);
     game.reset_status();
 
-    let playing_again = playing_again();
-    if !playing_again {
+    let is_broke: bool = game.balance() == 0;
+
+    let is_playing_again: bool = if is_broke {
+      playing_again(&broke_prompt)
+    } else {
+      playing_again(&non_broke_prompt)
+    };
+    if !is_playing_again {
       println!("Thanks for Playing!!");
       break;
+    }
+    if is_broke {
+      game = GameState::new_game();
     }
   }
 }
