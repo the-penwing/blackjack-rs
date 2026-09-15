@@ -15,6 +15,8 @@ pub enum GameStatus {
   PlayerBusted,
   PlayerWon,
   PlayerBlackjack,
+  DealerBlackjack,
+  BlackjackPush,
   DealerWon,
   Push,
 }
@@ -157,11 +159,25 @@ impl GameState {
         }
       }
     }
-    if self.is_nat_blackjack() {
+    self.check_and_resolve_natural();
+  }
+
+  pub fn check_and_resolve_natural(&mut self) {
+    let player_natural = is_natural(&self.player_hand);
+    let dealer_natural = is_natural(&self.dealer_hand);
+    if player_natural && dealer_natural {
+      self.status = GameStatus::BlackjackPush;
+      self.ties += 1
+    } else if player_natural && !dealer_natural {
       self.status = GameStatus::PlayerBlackjack;
       self.wins += 1;
-      self.resolve_payout(GameStatus::PlayerBlackjack);
+    } else if dealer_natural && !player_natural {
+      self.status = GameStatus::DealerBlackjack;
+      self.losses += 1
+    } else {
+      return;
     };
+    self.resolve_payout(self.status);
   }
 
   pub fn update(&mut self, action: Action) -> GameStatus {
@@ -195,7 +211,7 @@ impl GameState {
     match status {
       GameStatus::PlayerBlackjack => self.balance += self.current_bet * 5 / 2,
       GameStatus::PlayerWon => self.balance += self.current_bet * 2,
-      GameStatus::Push => self.balance += self.current_bet,
+      GameStatus::Push | GameStatus::BlackjackPush => self.balance += self.current_bet,
       _ => {},
     };
     self.current_bet = 0;
@@ -282,10 +298,6 @@ impl GameState {
   pub fn status(&self) -> GameStatus {
     self.status
   }
-
-  pub fn is_nat_blackjack(&self) -> bool {
-    self.player_hand.len() == 2 && calc_hand_value(&self.player_hand) == 21
-  }
 }
 
 fn build_deck() -> Vec<Card> {
@@ -325,4 +337,8 @@ fn calc_hand_value(hand: &[Card]) -> u8 {
   }
 
   total
+}
+
+fn is_natural(hand: &[Card]) -> bool {
+  hand.len() == 2 && calc_hand_value(hand) == 21
 }
