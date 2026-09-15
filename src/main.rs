@@ -68,6 +68,8 @@ fn render_round_result(game: &GameState) {
 
   match game.status() {
     GameStatus::PlayerBlackjack => println!("Natural Blackjack!!"),
+    GameStatus::DealerBlackjack => println!("Dealer Blackjack!!"),
+    GameStatus::BlackjackPush => println!("Blackjack Push!!"),
     GameStatus::PlayerBusted => println!("You Busted!!"),
     GameStatus::PlayerWon => println!("You Won!!"),
     GameStatus::DealerWon => println!("Dealer Won!!"),
@@ -121,7 +123,7 @@ fn betting_loop(game: &mut GameState) {
 fn round_loop(game: &mut GameState) {
   game.setup_round();
 
-  if game.status() == GameStatus::PlayerBlackjack {
+  if game.status() != GameStatus::InProgress {
     return;
   }
 
