@@ -193,7 +193,7 @@ impl GameState {
 
   fn resolve_payout(&mut self, status: GameStatus) {
     match status {
-      GameStatus::PlayerBlackjack => self.balance += self.current_bet * 3,
+      GameStatus::PlayerBlackjack => self.balance += self.current_bet * 5 / 2,
       GameStatus::PlayerWon => self.balance += self.current_bet * 2,
       GameStatus::Push => self.balance += self.current_bet,
       _ => {},
