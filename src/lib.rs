@@ -118,8 +118,8 @@ pub struct GameState {
   wins: u32,
   losses: u32,
   ties: u32,
-  balance: u32,
-  current_bet: u32,
+  balance: u64,
+  current_bet: u64,
 }
 
 impl GameState {
@@ -176,7 +176,7 @@ impl GameState {
   }
 
   pub fn place_bet(&mut self, real_amount: u32) -> Result<(), BetError> {
-    let amount: u32 = real_amount * 2;
+    let amount: u64 = real_amount as u64 * 2;
     if self.status != GameStatus::AwaitingBet {
       Err(BetError::WrongStatus)
     } else if real_amount == 0 {
@@ -260,11 +260,19 @@ impl GameState {
   }
 
   pub fn balance(&self) -> u32 {
-    self.balance / 2
+    debug_assert!(
+      self.balance <= u32::MAX as u64 * 2,
+      "balance exceeded doubled u32 range"
+    );
+    (self.balance / 2) as u32
   }
 
   pub fn current_bet(&self) -> u32 {
-    self.current_bet / 2
+    debug_assert!(
+      self.current_bet <= u32::MAX as u64 * 2,
+      "current_bet exceeded doubled u32 range"
+    );
+    (self.current_bet / 2) as u32
   }
 
   pub fn stats(&self) -> (u32, u32, u32) {
