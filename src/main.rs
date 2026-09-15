@@ -1,4 +1,4 @@
-use blackjack_rs::{self, Action, BetError, GameState, GameStatus};
+use blackjack_rs::{self, Action, BetError, GameState, GameStatus, UpdateError};
 use std::io::{self, Write};
 
 fn get_input(prompt: &str) -> String {
@@ -147,8 +147,15 @@ fn round_loop(game: &mut GameState) {
       _ => unreachable!(),
     };
 
-    if game.update(action) != GameStatus::InProgress {
-      break;
+    match game.update(action) {
+      Err(UpdateError::WrongStatus) => {
+        println!("Error: Attempted to call GameState::update() when GameStatus is not InProgress");
+      },
+      Ok(status) => {
+        if status != GameStatus::InProgress {
+          break;
+        }
+      },
     }
   }
 }

@@ -28,6 +28,11 @@ pub enum BetError {
   WrongStatus,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum UpdateError {
+  WrongStatus,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Suit {
   Hearts,
@@ -180,10 +185,13 @@ impl GameState {
     self.resolve_payout(self.status);
   }
 
-  pub fn update(&mut self, action: Action) -> GameStatus {
+  pub fn update(&mut self, action: Action) -> Result<GameStatus, UpdateError> {
+    if self.status != GameStatus::InProgress {
+      return Err(UpdateError::WrongStatus);
+    }
     match action {
-      Action::Hit => self.handle_hit(),
-      Action::Stand => self.handle_stand(),
+      Action::Hit => Ok(self.handle_hit()),
+      Action::Stand => Ok(self.handle_stand()),
     }
   }
 
