@@ -1,26 +1,27 @@
-# list recipes
+# List recipes
 default:
   just --list
 
-# run the CLI inside the nix shell
+# Run the CLI
 run:
-  nix develop -c cargo run
+  cargo run
 
-# run tests inside the nix shell
+# Run tests
 test:
-  nix develop -c cargo test
+  cargo test
 
-# clippy
+# Run cargo clippy
 clippy:
-  nix develop -c cargo clippy -- -D warnings
+  cargo clippy -- -D warnings
 
-# format
+# Format all files
 fmt:
-  nix develop -c cargo fmt
+  cargo fmt
+  alejandra .
 
-# check (format -> clippy -> test)
+# Check (format -> clippy -> test)
 check: fmt clippy test
 
-# build release binary
+# Build release binary
 build:
- nix develop -c cargo build --release
+ cargo build --release

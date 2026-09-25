@@ -1,2 +1,7 @@
+# Build Artifacts
 /target
 /result
+
+# Env Files
+.envrc
+.direnv/
